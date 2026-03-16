@@ -141,7 +141,7 @@ def ask_form():
         )
 
     response = client.responses.create(
-        model="gpt-5",
+        model="gpt-4.1-mini",
         input=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": message}
