@@ -3,8 +3,7 @@ from flask import Flask, request, jsonify, render_template_string
 from openai import OpenAI
 
 app = Flask(__name__)
-
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+client = OpenAI()
 
 SYSTEM_PROMPT = """
 You are an AI tutor for a self-paced online course titled Introduction to Land Surveying.
@@ -125,6 +124,16 @@ HTML = """
 </html>
 """
 
+def get_ai_response(message: str) -> str:
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": message}
+        ]
+    )
+    return response.output_text
+
 @app.route("/", methods=["GET"])
 def home():
     return render_template_string(HTML, response=None, message="")
@@ -140,15 +149,10 @@ def ask_form():
             message=""
         )
 
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": message}
-        ]
-    )
-
-    answer = response.output_text
+    try:
+        answer = get_ai_response(message)
+    except Exception as e:
+        answer = f"Error contacting AI service: {str(e)}"
 
     return render_template_string(
         HTML,
@@ -164,15 +168,11 @@ def chat_api():
     if not message:
         return jsonify({"error": "Missing message"}), 400
 
-    response = client.responses.create(
-        model="gpt-5",
-        input=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": message}
-        ]
-    )
-
-    return jsonify({"response": response.output_text})
+    try:
+        answer = get_ai_response(message)
+        return jsonify({"response": answer})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
